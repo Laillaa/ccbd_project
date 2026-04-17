@@ -15,3 +15,5 @@ Evaluate how different Parquet compression codecs impact storage size, transfer 
 
 ## Expected discussion
 Explain the CPU vs IO trade-off: stronger compression reduces bytes transferred but may increase CPU cost. Conclude with a recommendation (e.g., “zstd for storage efficiency when CPU is available; snappy for speed”) based on your measurements.
+
+## Deliverables
