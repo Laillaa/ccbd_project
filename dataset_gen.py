@@ -1,6 +1,6 @@
 # Create a synthetic event dataset with a fixed schema:
 # ts (timestamp), user_id (int), region (string), event_type (string), value (float)
-# Optional: payload 
+# Optional variable: payload 
 # Topic: Financial transactions
 
 import argparse
@@ -79,11 +79,16 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--size", choices=["S", "M", "L"], required=True)
     parser.add_argument("--output", required=True)
+    parser.add_argument("--codec", choices=["snappy", "zstd", "gzip"], required=True)
     args = parser.parse_args()
 
     n_rows = SIZE_TO_ROWS[args.size]
     df = generate_transactions(n_rows=n_rows, seed=seed)
-    df.to_parquet(args.output, index=False)
+    df.to_parquet(args.output, compression=args.codec, index=False)
+
+    # Save as CSV (same name, different extension)
+    # csv_output = args.output.replace(".parquet", ".csv")
+    # df.to_csv(csv_output, index=False)
 
 if __name__ == "__main__":
     main()
