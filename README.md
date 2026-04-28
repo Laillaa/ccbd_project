@@ -1,5 +1,8 @@
 # Compression codecs comparison
 
+## Group Members
+Laila Ibrahim & Verica Dimitrova
+
 ## Goal 
 Evaluate how different Parquet compression codecs impact storage size, transfer time, and query time. You will use the same dataset and only change the codec.
 
