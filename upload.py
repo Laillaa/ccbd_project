@@ -18,10 +18,10 @@ def upload_file(s3, local_path, bucket, key):
     end = time.time()
 
     duration = end - start
+    # throughput = transfer size (converted bytes into megabytes) / duration (seconds)
     mb = size_bytes / (1024 * 1024)
     if duration > 0:
         throughput = mb / duration 
-
     else:
         throughput = 0
 
@@ -31,13 +31,13 @@ def upload_file(s3, local_path, bucket, key):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--bucket", required=True)
-    # parser.add_argument("--s3-prefix", default="curated")
-    # we don't use AWS (Amazon web service) S3 so we need to explicitly connect to the server
+    parser.add_argument("--s3-prefix", default="curated")
+    # we don't use AWS (Amazon web service) S3 so we need to explicitly connect to a server
     parser.add_argument("--endpoint-url", default=None)
 
     args = parser.parse_args()
 
-    sizes = ["S", "M"]
+    sizes = ["S", "M", "L"]
     codecs = ["snappy", "zstd", "gzip"]
 
     s3 = create_s3_client(args.endpoint_url)
