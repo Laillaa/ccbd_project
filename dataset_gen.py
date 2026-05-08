@@ -81,7 +81,10 @@ def generate_transactions(n_rows: int, seed: int = 42) -> pd.DataFrame:
 
 def write_transactions_chunked(output, n_rows, codec, chunk_rows, seed=42):
 
-    os.makedirs(os.path.dirname(output), exist_ok=True)
+    output_dir = os.path.dirname(output)
+
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
 
     writer = None
     rows_written = 0
@@ -115,12 +118,13 @@ def write_transactions_chunked(output, n_rows, codec, chunk_rows, seed=42):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--size", choices=["S", "M", "L"], required=True)
-    parser.add_argument("--codec", choices=["snappy", "zstd", "gzip"], required=True)
+    parser.add_argument("--codec", choices=["snappy", "zstd", "gzip", "None"], required=True)
     parser.add_argument("--chunk-rows", type=int, default=1_000_000)
     args = parser.parse_args()
 
     n_rows = SIZE_TO_ROWS[args.size]
-    output_dir = os.path.join("data", f"size{args.size}", f"transactions_{args.codec}")
+    output_dir = os.path.join("data", f"size_{args.size}", f"transactions_{args.codec}.parquet")
+
     write_transactions_chunked(output=output_dir, n_rows=n_rows, codec=args.codec, chunk_rows=args.chunk_rows, seed=seed)
 
 if __name__ == "__main__":
