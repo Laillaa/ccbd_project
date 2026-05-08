@@ -1,3 +1,8 @@
+'''
+Upload/download = moving data
+Query = processing data
+Listing = finding data
+'''
 import os
 import time
 import argparse
@@ -9,7 +14,7 @@ from botocore.config import Config
 from upload import upload_file
 from download import download_file
 
-sizes = ["S", "M"]
+sizes = ["S", "M", "L"]
 codecs = ["snappy", "zstd", "gzip"]
 
 def create_s3_client(endpoint_url=None):
@@ -22,6 +27,8 @@ def create_s3_client(endpoint_url=None):
 def get_local_size(path):
     return os.path.getsize(path)
 
+# Measures the time required to retrieve metadata (object names and sizes) 
+# for all files under a given prefix in object storage.
 def list_prefix(s3, bucket, prefix):
 
     start = time.time()
@@ -33,15 +40,37 @@ def list_prefix(s3, bucket, prefix):
 
     return end - start, object_count, total_bytes
 
-def run_query(path):
+def run_query(path, region=None, event_type=None, start_date=None, end_date=None, min_value=None, max_value=None):
+
     dataset = ds.dataset(path, format="parquet")
 
-    # creating a query that filters by region and time range
-    query_filter = (
-        (ds.field("region") == "CH") &
-        (ds.field("ts") >= pd.Timestamp("2025-06-01")) &
-        (ds.field("ts") < pd.Timestamp("2025-09-01"))
-    )
+    query_filter = None
+
+    # creating a query filter that is more dynamic
+    if region is not None:
+        condition = ds.field("region") == region
+        query_filter = condition if query_filter is None else query_filter & condition
+
+    if event_type is not None:
+        condition = ds.field("event_type") == event_type
+        query_filter = condition if query_filter is None else query_filter & condition
+
+    if start_date is not None:
+        condition = ds.field("ts") >= pd.Timestamp(start_date)
+        query_filter = condition if query_filter is None else query_filter & condition
+
+    if end_date is not None:
+        condition = ds.field("ts") < pd.Timestamp(end_date)
+        query_filter = condition if query_filter is None else query_filter & condition
+
+    if min_value is not None:
+        condition = ds.field("value") >= min_value
+        query_filter = condition if query_filter is None else query_filter & condition
+
+    if max_value is not None:
+        condition = ds.field("value") <= max_value
+        query_filter = condition if query_filter is None else query_filter & condition
+
 
     # Start measuring the time to scan + filtering + grouping
     start = time.time()
@@ -50,7 +79,7 @@ def run_query(path):
     table = dataset.to_table(filter=query_filter)
 
     df = table.to_pandas()
-    # grouping by event type and aaggregate
+    # grouping by event type and aggregate
     result = df.groupby("event_type")["value"].agg(["count", "mean"])
 
     end = time.time()
@@ -64,6 +93,14 @@ def main():
     parser.add_argument("--local-root", default="data")
     parser.add_argument("--download-root", default="downloads")
     parser.add_argument("--output", default="results.csv")
+
+    parser.add_argument("--region", default=None)
+    parser.add_argument("--event-type", default=None)
+    parser.add_argument("--start-date", default=None)
+    parser.add_argument("--end-date", default=None)
+    parser.add_argument("--min-value", type=float, default=None)
+    parser.add_argument("--max-value", type=float, default=None)
+
 
     args = parser.parse_args()
 
@@ -86,7 +123,13 @@ def main():
             listing_time, object_count, s3_bytes = list_prefix(s3, args.bucket, prefix)
             _ , download_time, download_throughput = download_file(s3, args.bucket, key, downloaded_path)
             
-            query_time, result = run_query(downloaded_path)
+            query_time, result = run_query(downloaded_path, 
+                region=args.region, 
+                event_type=args.event_type, 
+                start_date=args.start_date,
+                end_date=args.end_date,
+                min_value=args.min_value,
+                max_value=args.max_value,)
 
             rows.append({
                 "size": size,
