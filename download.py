@@ -36,7 +36,7 @@ def main():
     args = parser.parse_args()
 
     sizes = ["S", "M", "L"]
-    codecs = ["snappy", "zstd", "gzip"]
+    codecs = ["snappy", "zstd", "gzip", "None"]
 
     s3 = create_s3_client(args.endpoint_url)
 
