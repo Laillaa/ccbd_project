@@ -6,6 +6,10 @@
 import argparse
 import numpy as np
 import pandas as pd
+import os
+
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 seed = 42
 SIZE_TO_ROWS = {"S": 5_000_000, "M": 25_000_000, "L": 100_000_000,}
@@ -75,20 +79,49 @@ def generate_transactions(n_rows: int, seed: int = 42) -> pd.DataFrame:
         "payload": payload
     })
 
+def write_transactions_chunked(output, n_rows, codec, chunk_rows, seed=42):
+
+    os.makedirs(os.path.dirname(output), exist_ok=True)
+
+    writer = None
+    rows_written = 0
+    chunk_id = 0
+
+    try:
+        while rows_written < n_rows:
+
+            current_chunk_rows = min(chunk_rows, n_rows - rows_written)
+
+            df = generate_transactions(n_rows=current_chunk_rows, seed=seed + chunk_id)
+
+            table = pa.Table.from_pandas(df, preserve_index=False)
+
+            if writer is None:
+                writer = pq.ParquetWriter(output, table.schema, compression=codec)
+
+            writer.write_table(table)
+
+            rows_written += current_chunk_rows
+            chunk_id += 1
+
+            print(f"Wrote chunk {chunk_id} "
+                f"({rows_written:,}/{n_rows:,} rows)"
+            )
+
+    finally:
+        if writer is not None:
+            writer.close()
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--size", choices=["S", "M", "L"], required=True)
-    parser.add_argument("--output", required=True)
     parser.add_argument("--codec", choices=["snappy", "zstd", "gzip"], required=True)
+    parser.add_argument("--chunk-rows", type=int, default=2_000_000)
     args = parser.parse_args()
 
     n_rows = SIZE_TO_ROWS[args.size]
-    df = generate_transactions(n_rows=n_rows, seed=seed)
-    df.to_parquet(args.output, compression=args.codec, index=False)
-
-    # Save as CSV (same name, different extension)
-    # csv_output = args.output.replace(".parquet", ".csv")
-    # df.to_csv(csv_output, index=False)
+    output_dir = os.path.join("data", f"size{args.size}", f"transactions_{args.codec}")
+    write_transactions_chunked(output=output_dir, n_rows=n_rows, codec=args.codec, chunk_rows=args.chunk_rows, seed=seed)
 
 if __name__ == "__main__":
     main()
