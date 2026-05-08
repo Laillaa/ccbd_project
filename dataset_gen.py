@@ -116,7 +116,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--size", choices=["S", "M", "L"], required=True)
     parser.add_argument("--codec", choices=["snappy", "zstd", "gzip"], required=True)
-    parser.add_argument("--chunk-rows", type=int, default=2_000_000)
+    parser.add_argument("--chunk-rows", type=int, default=1_000_000)
     args = parser.parse_args()
 
     n_rows = SIZE_TO_ROWS[args.size]
