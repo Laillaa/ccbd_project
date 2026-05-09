@@ -157,8 +157,10 @@ def main():
                 end_date=args.end_date,
                 min_value=args.min_value,
                 max_value=args.max_value,)
+            
+            print(result)
 
-            rows.append({
+            row = {
                 "size": size,
                 "codec": codec,
                 "stored_bytes_local": stored_bytes,
@@ -169,18 +171,20 @@ def main():
                 "listing_time_seconds": listing_time,
                 "download_time_seconds": download_time,
                 "download_throughput": download_throughput,
-                "query_time_seconds": query_time})
+                "query_time_seconds": query_time
+            }
+
+            rows.append(row)
+            pd.DataFrame(rows).to_csv(args.output, index=False)
 
             print("---------------------------------------")
             print(f"Upload throughput: {upload_throughput:.2f} MB/s")
             print(f"Download throughput: {download_throughput:.2f} MB/s")
             print(f"Listing time: {listing_time:.4f}s")
             print(f"Query time: {query_time:.4f}s")
+
             print("---------------------------------------")
 
-    df = pd.DataFrame(rows)
-    df.to_csv(args.output, index=False)
-    print(f"Results written to {args.output}")
 
 if __name__ == "__main__":
     main()
